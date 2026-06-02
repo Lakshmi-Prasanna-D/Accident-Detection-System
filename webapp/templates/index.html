@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA | Urban Response</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #3B82F6;
+            --primary-light: #60A5FA;
+            --bg: #0F172A;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-light: rgba(51, 65, 85, 0.5);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #F8FAFC;
+            --text-muted: #94A3B8;
+            --danger: #EF4444;
+            --success: #10B981;
+            --glow-primary: rgba(59, 130, 246, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        /* Overall Structure */
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        .nav-sidebar {
+            width: 72px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem 0;
+            gap: 1.5rem;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-logo {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px var(--glow-primary);
+        }
+
+        .nav-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            transform: scale(1.05);
+        }
+
+        .main-content { 
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #1a1f2e, var(--bg));
+        }
+
+        /* Header */
+        .header {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: rgba(21, 26, 34, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-logo h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .app-logo h1 span {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--primary);
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .pulse {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse-primary 1.5s infinite;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .map-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+        }
+
+        .map-container {
+            flex-grow: 1;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .bottom-logs-panel {
+            height: 200px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h3 {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logs-horizontal-feed {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .stat-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .dot-g { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 4px; }
+
+        /* Video Section */
+        .video-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .video-wrapper {
+            aspect-ratio: 16/10;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .video-wrapper.active { border-color: var(--primary); box-shadow: 0 0 15px var(--glow-primary); }
+        .video-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+
+        .live-badge {
+            position: absolute;
+            top: 10px; left: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .live-blink { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: pulse-danger 1s infinite; }
+
+        /* Stats & Alert Cards */
+        .stat-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon { font-size: 1.25rem; }
+        .stat-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        .stat-value { font-size: 1.25rem; font-weight: 700; }
+
+        .alert-card {
+            min-width: 260px;
+            max-width: 260px;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            flex-shrink: 0;
+            border-left: 4px solid var(--danger);
+        }
+
+        .tooltip { position: relative; }
+
+        @keyframes pulse-primary {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes pulse-danger {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <!-- Navigation Sidebar -->
+    <nav class="nav-sidebar">
+        <div class="nav-logo">A</div>
+        <div class="nav-items">
+            <a href="/" class="nav-item tooltip" title="Home"><span>🏠</span></a>
+            <a href="/dashboard" class="nav-item tooltip active" title="Dashboard"><span>📊</span></a>
+            <a href="/live" class="nav-item tooltip" title="Live View"><span>🎥</span></a>
+            <a href="/architecture" class="nav-item tooltip" title="Architecture"><span>🏗️</span></a>
+            <a href="/history" class="nav-item tooltip" title="History"><span>📜</span></a>
+            <a href="/analytics" class="nav-item tooltip" title="Analytics"><span>📈</span></a>
+            <a href="/about" class="nav-item tooltip" title="About"><span>ℹ️</span></a>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <a href="/alerts" class="nav-item tooltip" title="Alerts"><span style="color:var(--danger)">🔔</span></a>
+    </nav>
+
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="app-logo">
+                    <h1>AURA <span>Urban Response AI</span></h1>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="pulse"></span>
+                    SYSTEM ONLINE
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Video and Sidebar Section (Now on Left) -->
+            <div class="video-section">
+                <div class="video-grid">
+                    <div class="video-wrapper active" id="wrapper-0" onclick="selectCam(0)">
+                        <div class="live-badge">
+                            <span class="live-blink"></span> <span id="cam-label-0">C122</span>
+                        </div>
+                        <img id="video-feed-0" src="/video_feed/0" alt="Camera 1">
+                    </div>
+                    <div class="video-wrapper" id="wrapper-1" onclick="selectCam(1)">
+                        <div class="live-badge">
+                            <span class="live-blink"></span> <span id="cam-label-1">C707</span>
+                        </div>
+                        <img id="video-feed-1" src="/video_feed/1" alt="Camera 2">
+                    </div>
+                    <div class="video-wrapper" id="wrapper-2" onclick="selectCam(2)">
+                        <div class="live-badge">
+                            <span class="live-blink"></span> <span id="cam-label-2">C9181</span>
+                        </div>
+                        <img id="video-feed-2" src="/video_feed/2" alt="Camera 3">
+                    </div>
+                    <!-- Dedicated Upload Slot -->
+                    <div class="video-wrapper" id="wrapper-3" style="background: #111; border-style: dashed; border-width: 2px;">
+                        <button onclick="clearUpload()" style="position: absolute; top: 10px; right: 10px; z-index: 10; background: rgba(239, 68, 68, 0.8); border: none; border-radius: 50%; width: 24px; height: 24px; color: white; cursor: pointer; font-size: 14px; font-weight: bold;">×</button>
+                        <div class="live-badge" style="background: var(--primary); color: white;">
+                            <span>📤</span> UPLOAD
+                        </div>
+                        <img id="video-feed-3" src="/video_feed/3" alt="Upload" onerror="this.src='https://placehold.co/600x400/000000/FFFFFF?text=Ready+for+Upload'">
+                        <div id="upload-prompt" style="position: absolute; bottom: 10px; text-align: center; width: 100%;">
+                            <button onclick="document.getElementById('file-upload').click()" 
+                                    style="background: var(--primary); color: white; border: none; padding: 5px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">
+                                Select Media
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-icon">🚗</div>
+                        <div class="stat-details">
+                            <div class="stat-label">Active Vehicles</div>
+                            <div class="stat-value" id="val-vehicles">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 4px solid var(--danger)">
+                        <div class="stat-icon" style="color:var(--danger); background:rgba(239,68,68,0.1)">🚨</div>
+                        <div class="stat-details">
+                            <div class="stat-label">Detect. Alerts</div>
+                            <div class="stat-value" id="val-accidents">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Architecture Mini Widget -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1.25rem; margin-top: 1rem;">
+                    <h4 style="font-size: 0.75rem; color: var(--primary); margin-bottom: 1rem; letter-spacing: 1px;">SYSTEM STATUS</h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem;">
+                            <span style="color: var(--text-muted)">YOLOv11 Engine</span>
+                            <span style="color: var(--success)">ACTIVE</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem;">
+                            <span style="color: var(--text-muted)">Impact Analysis</span>
+                            <span style="color: var(--success)">READY</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem;">
+                            <span style="color: var(--text-muted)">Cloud Uplink</span>
+                            <span style="color: var(--primary)">DORMANT</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map and Logs Section (Now on Right) -->
+            <div class="map-section">
+                <div class="map-container" id="map"></div>
+                
+                <!-- Bottom Logs Overlay -->
+                <div class="bottom-logs-panel">
+                    <div class="panel-header">
+                        <h3><span>🔔</span> RECENT INCIDENTS</h3>
+                        <div class="panel-stats">
+                            <span class="stat-tag"><i class="dot-g"></i> LIVE ENGINES</span>
+                            <span id="clear-logs" class="stat-tag" style="cursor:pointer; color: var(--primary)">CLEAR LOGS</span>
+                        </div>
+                    </div>
+                    <div class="logs-horizontal-feed" id="alert-feed">
+                        <div style="text-align: center; color: var(--text-muted); padding: 2rem; width: 100%; font-style: italic;">
+                            Synchronizing with edge sensors...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="file-upload" accept="video/*,image/*" style="display: none;">
+
+    </div>
+
+    <script>
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+        const valVehicles = document.getElementById('val-vehicles');
+        const valAccidents = document.getElementById('val-accidents');
+        const alertFeed = document.getElementById('alert-feed');
+        
+        let selectedCamIdx = 0;
+
+        function selectCam(idx) {
+            if (idx === 3) return; 
+            selectedCamIdx = idx;
+            document.querySelectorAll('.video-wrapper').forEach(w => w.classList.remove('active'));
+            document.getElementById(`wrapper-${idx}`).classList.add('active');
+        }
+
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+
+        // Initialize GIS Map
+        const map = L.map('map', {
+            center: [44.97, -93.26],
+            zoom: 12,
+            zoomControl: false
+        });
+        
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri'
+        }).addTo(map);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{y}/{x}{r}.png', {
+            opacity: 0.8
+        }).addTo(map);
+
+        const cams = [
+            { id: "C122", lat: 44.975, lng: -93.245, label: "I-94 Riverside" },
+            { id: "C707", lat: 44.920, lng: -93.275, label: "I-35W 46th St" },
+            { id: "C9181", lat: 44.975, lng: -93.285, label: "I-394 Dunwoody" },
+        ];
+        const markers = {};
+        cams.forEach(cam => {
+            const marker = L.circleMarker([cam.lat, cam.lng], {
+                color: '#3B82F6', radius: 6, fillOpacity: 0.8, weight: 2
+            }).addTo(map).bindPopup(`<b>${cam.label}</b><br>ID: ${cam.id}`);
+            markers[cam.id] = marker;
+        });
+
+        let isFirstAlert = true;
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if(data.stats) {
+                if (valVehicles) valVehicles.textContent = data.stats.vehicles;
+                if (valAccidents && parseInt(valAccidents.textContent) !== data.stats.accidents) {
+                    valAccidents.textContent = data.stats.accidents;
+                }
+            }
+
+            if(data.alert) {
+                if (isFirstAlert) {
+                    alertFeed.innerHTML = '';
+                    isFirstAlert = false;
+                }
+
+                const alert = data.alert;
+                const timeString = new Date(alert.timestamp * 1000).toLocaleTimeString();
+                const card = document.createElement('div');
+                card.className = 'alert-card';
+                
+                if (alert.type === 'SAFE') {
+                    card.style.borderLeftColor = '#10B981';
+                    card.innerHTML = `
+                        <div class="panel-header" style="margin-bottom: 8px;">
+                            <div style="color: #10B981; font-weight: 800; font-size: 0.75rem;">SECURE</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted)">${timeString}</div>
+                        </div>
+                        <div style="font-size: 0.8rem;">
+                            Stream ${alert.camera_id}: Normal traffic flow detected.
+                        </div>
+                    `;
+                    if (markers[alert.camera_id] && alert.camera_id !== 'Upload') {
+                        markers[alert.camera_id].setStyle({color: '#3B82F6', fillColor: '#3B82F6', radius: 6});
+                    }
+                } else {
+                    card.innerHTML = `
+                        <div class="panel-header" style="margin-bottom: 8px;">
+                            <div style="color: var(--danger); font-weight: 800; font-size: 0.75rem;">ACCIDENT</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted)">${timeString}</div>
+                        </div>
+                        <div style="font-size: 0.8rem; margin-bottom: 8px;">
+                            Incident at <strong>${alert.camera_id}</strong>
+                        </div>
+                        <div style="font-size: 0.65rem; background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 4px 8px; border-radius: 4px; display: inline-block; font-weight: 700;">
+                            Severity: ${alert.severity}
+                        </div>
+                    `;
+                    
+                    if (alert.camera_id !== 'Upload' && markers[alert.camera_id]) {
+                        markers[alert.camera_id].setStyle({color: '#EF4444', fillColor: '#EF4444', radius: 10});
+                        markers[alert.camera_id].bindPopup(`<b>ACCIDENT</b><br>Severity: ${alert.severity}`).openPopup();
+                        map.flyTo(markers[alert.camera_id].getLatLng(), 14);
+                    }
+
+                    if (alert.camera_id !== 'Upload' && Notification.permission === "granted") {
+                        new Notification("AURA: Accident Detected", { body: `Camera: ${alert.camera_id}\nSeverity: ${alert.severity}` });
+                    }
+                }
+                alertFeed.prepend(card);
+            }
+        };
+
+        const fileUpload = document.getElementById('file-upload');
+        fileUpload.addEventListener('change', (e) => {
+            if (!e.target.files?.length) return;
+            const formData = new FormData();
+            formData.append('file', e.target.files[0]);
+            document.getElementById('upload-prompt').style.display = 'none';
+            fetch('/upload_media', { method: 'POST', body: formData })
+                .then(() => {
+                    const img = document.getElementById('video-feed-3');
+                    img.src = `/video_feed/3?t=` + Date.now();
+                });
+        });
+
+        function clearUpload() {
+            fetch('/reset_upload').then(() => {
+                document.getElementById('video-feed-3').src = 'https://placehold.co/600x400/000000/FFFFFF?text=Ready+for+Upload';
+                document.getElementById('upload-prompt').style.display = 'block';
+            });
+        }
+
+        document.getElementById('clear-logs').onclick = () => {
+            alertFeed.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem; width: 100%; font-style: italic;">Cache cleared. Monitoring active...</div>';
+            isFirstAlert = true;
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}About | Project AURA{% endblock %}
+{% block page_title %}About the Project{% endblock %}
+
+{% block content %}
+<div class="about-container">
+    <div class="about-section">
+        <h3>Vision & Objective</h3>
+        <p>AURA (AI Urban Response & Analysis) is a state-of-the-art automated monitoring system designed to enhance city-level safety. By leveraging Computer Vision, AURA detects road accidents and critical traffic incidents in real-time, significantly reducing the delay between occurrence and emergency response.</p>
+    </div>
+
+    <div class="about-grid">
+        <div class="analytic-card">
+            <h4>Problem Statement</h4>
+            <p>Traditional urban monitoring relies on manual observation of thousands of CCTV feeds. This leads to human fatigue, delayed incident detection, and increased mortality rates in high-speed traffic zones. AURA automates this surveillance, providing 24/7 vigilant oversight without loss of attention.</p>
+        </div>
+
+        <div class="analytic-card">
+            <h4>Dataset Details</h4>
+            <p>The model is trained on a custom-curated dataset from <b>Roboflow</b>, incorporating:</p>
+            <ul style="margin: 1rem; color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
+                <li>Over 12,000 annotated accident scenes.</li>
+                <li>Vehicular impact variants (frontal, side-sweep, pileups).</li>
+                <li>Diverse environmental conditions (rain, fog, night-vision).</li>
+                <li>Shadow and occlusion handling datasets.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="about-section" style="margin-top: 2rem;">
+        <h3>Technologies Leveraged</h3>
+        <div class="tech-grid">
+            <div class="tech-box">
+                <b>YOLOv11</b>
+                <span>Object Detection</span>
+            </div>
+            <div class="tech-box">
+                <b>FastAPI</b>
+                <span>Backend Core</span>
+            </div>
+            <div class="tech-box">
+                <b>WebSockets</b>
+                <span>Real-time Comms</span>
+            </div>
+            <div class="tech-box">
+                <b>OpenCV</b>
+                <span>Frame Processing</span>
+            </div>
+            <div class="tech-box">
+                <b>Leaflet GIS</b>
+                <span>Spatial Analysis</span>
+            </div>
+            <div class="tech-box">
+                <b>PyTorch</b>
+                <span>DL Framework</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .about-container { max-width: 900px; margin: 0 auto; }
+    .about-section { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem; margin-bottom: 2rem; }
+    .about-section h3 { color: var(--primary); margin-bottom: 1rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 1px; }
+    .about-section p { line-height: 1.8; color: var(--text-muted); font-size: 1rem; }
+
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .about-grid .analytic-card h4 { color: var(--text); margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+    .about-grid .analytic-card p { font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); }
+
+    .tech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; }
+    .tech-box { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s; }
+    .tech-box:hover { background: rgba(59, 130, 246, 0.05); border-color: var(--primary); }
+    .tech-box b { font-size: 0.9rem; color: var(--text); }
+    .tech-box span { font-size: 0.7rem; color: var(--text-muted); }
+</style>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics | Performance{% endblock %}
+{% block page_title %}Predictive Analytics{% endblock %}
+
+{% block content %}
+<div class="analytics-grid">
+    <div class="analytic-card full-width">
+        <div class="card-header">
+            <h3>Incident Trends (24h)</h3>
+            <span class="badge success">LIVE DATA</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="analytic-card">
+        <div class="card-header">
+            <h3>Distribution Analysis</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="ratioChart"></canvas>
+        </div>
+    </div>
+
+    <div class="analytic-card">
+        <div class="card-header">
+            <h3>Camera-wise Performance</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="camChart"></canvas>
+        </div>
+    </div>
+
+    <div class="analytic-card metrics-card">
+        <div class="card-header">
+            <h3>Model Metrics</h3>
+        </div>
+        <div class="metrics-list">
+            <div class="metric-row">
+                <span>mAP@.5:.95</span>
+                <div class="progress-bg"><div class="progress-bar" style="width: 82%"></div></div>
+                <span>0.82</span>
+            </div>
+            <div class="metric-row">
+                <span>Inference Latency</span>
+                <div class="progress-bg"><div class="progress-bar" style="width: 15%"></div></div>
+                <span>12ms</span>
+            </div>
+            <div class="metric-row">
+                <span>Recall Rate</span>
+                <div class="progress-bg"><div class="progress-bar" style="width: 91%"></div></div>
+                <span>0.91</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .analytics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+    .analytic-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; }
+    .analytic-card.full-width { grid-column: span 2; }
+    
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .card-header h3 { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    .chart-container { height: 260px; position: relative; }
+    
+    .metrics-list { display: flex; flex-direction: column; gap: 1.25rem; }
+    .metric-row { display: grid; grid-template-columns: 120px 1fr 50px; align-items: center; gap: 1rem; font-size: 0.85rem; }
+    .progress-bg { background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; }
+    .progress-bar { background: var(--primary); height: 100%; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    const trendChart = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Accidents',
+                data: [],
+                borderColor: '#EF4444',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(239, 68, 68, 0.1)'
+            }, {
+                label: 'Vehicles',
+                data: [],
+                borderColor: '#3B82F6',
+                tension: 0.4
+            }]
+        },
+        options: { 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, labels: { color: '#94A3B8' } } },
+            scales: { 
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }, 
+                x: { grid: { display: false }, ticks: { color: '#94A3B8' } } 
+            }
+        }
+    });
+
+    const ctxRatio = document.getElementById('ratioChart').getContext('2d');
+    const ratioChart = new Chart(ctxRatio, {
+        type: 'doughnut',
+        data: {
+            labels: ['Accidents', 'Normal Traffic'],
+            datasets: [{
+                data: [0, 100],
+                backgroundColor: ['#EF4444', '#3B82F6'],
+                borderWidth: 0
+            }]
+        },
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } }
+    });
+
+    const ctxCam = document.getElementById('camChart').getContext('2d');
+    const camChart = new Chart(ctxCam, {
+        type: 'bar',
+        data: {
+            labels: ['Node 1', 'Node 2', 'Node 3'],
+            datasets: [{
+                label: 'Detections (Current)',
+                data: [0, 0, 0],
+                backgroundColor: '#3B82F6',
+                borderRadius: 8
+            }]
+        },
+        options: { 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { color: '#94A3B8' } }, 
+                x: { grid: { display: false }, ticks: { color: '#94A3B8' } } 
+            }
+        }
+    });
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+    let lastData = { vehicles: 0, accidents: 0, cam_stats: [] };
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.stats) {
+            lastData = data.stats;
+            
+            // Update camChart
+            if (data.stats.cam_stats) {
+                camChart.data.datasets[0].data = data.stats.cam_stats.map(c => c.val);
+                camChart.update('none'); // Update without animation for performance
+            }
+
+            // Update live progress bars
+            if (data.stats.model) {
+                const conf = parseFloat(data.stats.model.confidence);
+                const latency = parseFloat(data.stats.model.latency);
+                
+                const confBar = document.querySelector('.metric-row:nth-child(1) .progress-bar');
+                if (confBar) confBar.style.width = conf + '%';
+                
+                const latBar = document.querySelector('.metric-row:nth-child(2) .progress-bar');
+                if (latBar) latBar.style.width = Math.max(0, 100 - (latency * 100)) + '%';
+            }
+        }
+    };
+
+    // Update historical charts every 5 seconds
+    setInterval(() => {
+        const now = new Date().toLocaleTimeString();
+        
+        // Trend Chart
+        if (trendChart.data.labels.length > 15) {
+            trendChart.data.labels.shift();
+            trendChart.data.datasets[0].data.shift();
+            trendChart.data.datasets[1].data.shift();
+        }
+        trendChart.data.labels.push(now);
+        trendChart.data.datasets[0].data.push(lastData.accidents);
+        trendChart.data.datasets[1].data.push(lastData.vehicles);
+        trendChart.update();
+
+        // Ratio Chart
+        ratioChart.data.datasets[0].data = [lastData.accidents, lastData.vehicles + 1];
+        ratioChart.update();
+    }, 5000);
+</script>
+{% endblock %}

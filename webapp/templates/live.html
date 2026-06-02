@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Live | Monitoring{% endblock %}
+{% block page_title %}Real-time Monitoring{% endblock %}
+
+{% block content %}
+<div class="live-grid-layout">
+    <div class="video-container">
+        <div class="main-video-grid">
+            {% for i in range(3) %}
+            <div class="cam-box" id="wrapper-{{ i }}" onclick="selectCam({{ i }})">
+                <div class="cam-header">
+                    <span class="pulse"></span>
+                    <span class="cam-name">CAMERA {{ i+1 }}</span>
+                    <span class="cam-id-tag">C-NODE 0{{i+1}}</span>
+                </div>
+                <img id="video-feed-{{ i }}" src="/video_feed/{{ i }}" alt="CAM {{ i+1 }}">
+                <div class="cam-overlay">
+                    <div class="detection-badge" id="badge-{{i}}">STATUS: SECURE</div>
+                </div>
+            </div>
+            {% endfor %}
+            <div class="cam-box upload-slot" id="wrapper-3">
+                <div class="cam-header" style="background:var(--primary)">
+                    <span>📤</span> UPLOAD ANALYSIS
+                </div>
+                <img id="video-feed-3" src="https://placehold.co/600x400/000000/FFFFFF?text=Select+Media" alt="Upload">
+                <div class="upload-controls">
+                    <input type="file" id="file-input" hidden accept="video/*,image/*">
+                    <button class="btn-primary" onclick="document.getElementById('file-input').click()">UPLOAD</button>
+                    <button class="btn-danger" onclick="clearUpload()">RESET</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts Log -->
+        <div class="live-alerts-panel">
+            <div class="panel-header">
+                <h3>TELEMETRY LOGS</h3>
+                <span id="clear-logs">CLEAR ALL</span>
+            </div>
+            <div class="alerts-feed" id="alert-feed">
+                <div class="feed-placeholder">Awaiting secure uplink...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Map View (Swaped to Right) -->
+    <div class="secondary-map-view">
+        <div id="map"></div>
+        <div class="map-stats">
+            <div class="map-stat-item">
+                <span class="dot primary"></span> 3 ACTIVE NODES
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .live-grid-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; height: calc(100vh - 150px); }
+    
+    .video-container { display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; }
+    .main-video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    
+    .cam-box { background: #000; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; position: relative; aspect-ratio: 16/10; cursor: pointer; transition: all 0.3s; }
+    .cam-box:hover { border-color: var(--primary); }
+    .cam-box.active { border-color: var(--primary); box-shadow: 0 0 20px var(--glow-primary); }
+    
+    .cam-header { position: absolute; top:0; left:0; right:0; padding: 10px 15px; background: rgba(0,0,0,0.6); display: flex; align-items: center; gap: 10px; z-index: 10; font-size: 0.7rem; font-weight: 800; }
+    .pulse { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: pulse-danger 1s infinite; }
+    .cam-id-tag { margin-left: auto; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); }
+    
+    .cam-box img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .cam-overlay { position: absolute; bottom: 15px; left: 15px; pointer-events: none; }
+    .detection-badge { background: rgba(16, 185, 129, 0.9); padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
+    .detection-badge.alert { background: rgba(239, 68, 68, 0.9); }
+
+    .upload-slot { border-style: dashed; border-width: 2px; }
+    .upload-controls { position: absolute; inset:0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s; }
+    .upload-slot:hover .upload-controls { opacity: 1; }
+    .btn-primary { background: var(--primary); border: none; padding: 8px 16px; border-radius: 8px; color: white; font-weight: 700; cursor: pointer; }
+    .btn-danger { background: var(--danger); border: none; padding: 8px 16px; border-radius: 8px; color: white; font-weight: 700; cursor: pointer; }
+
+    .live-alerts-panel { background: var(--surface); border-radius: 20px; border: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 400px; }
+    .alerts-feed { display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; flex-grow: 1; }
+    .alert-item { background: var(--surface-light); padding: 12px; border-radius: 12px; border-left: 4px solid var(--primary); display: flex; gap: 12px; align-items: center; }
+    .alert-item.accident { border-left-color: var(--danger); }
+    .alert-time { font-size: 0.65rem; color: var(--text-muted); }
+    .alert-msg { font-size: 0.8rem; font-weight: 500; }
+
+    .secondary-map-view { background: var(--surface); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+    #map { flex-grow: 1; width: 100%; border-radius: inherit; }
+    .map-stats { position: absolute; bottom: 15px; left: 15px; right: 15px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 12px; backdrop-filter: blur(5px); pointer-events: none; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .dot.primary { background: var(--primary); }
+
+    @keyframes pulse-danger { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let map = L.map('map', { center: [44.97, -93.26], zoom: 11, zoomControl: false });
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{y}/{x}{r}.png', { opacity: 0.8 }).addTo(map);
+
+    const cams = [
+        { id: "C122", lat: 44.975, lng: -93.245 },
+        { id: "C707", lat: 44.920, lng: -93.275 },
+        { id: "C9181", lat: 44.975, lng: -93.285 }
+    ];
+    const markers = {};
+    cams.forEach(cam => {
+        markers[cam.id] = L.circleMarker([cam.lat, cam.lng], { color: '#3B82F6', radius: 6, fillOpacity: 0.8 }).addTo(map);
+    });
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const alertFeed = document.getElementById('alert-feed');
+    let isFirst = true;
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.alert) {
+            if (isFirst || alertFeed.innerHTML.includes('Awaiting')) { alertFeed.innerHTML = ''; isFirst = false; }
+            const alert = data.alert;
+            const time = new Date(alert.timestamp * 1000).toLocaleTimeString();
+            
+            const item = document.createElement('div');
+            item.className = `alert-item ${alert.type === 'ACCIDENT' ? 'accident' : ''}`;
+            item.innerHTML = `
+                <div class="alert-info">
+                    <div class="alert-time">${time} | ${alert.camera_id}</div>
+                    <div class="alert-msg">${alert.type === 'ACCIDENT' ? '🚨 ACCIDENT DETECTED' : '✅ SAFE FLOW'}</div>
+                </div>
+            `;
+            alertFeed.prepend(item);
+
+            if (alert.type === 'ACCIDENT') {
+                if (markers[alert.camera_id]) {
+                    markers[alert.camera_id].setStyle({color: '#EF4444', radius: 10});
+                    map.flyTo(markers[alert.camera_id].getLatLng(), 14);
+                }
+            }
+        }
+    };
+
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/upload_media', { method: 'POST', body: formData })
+            .then(() => document.getElementById('video-feed-3').src = '/video_feed/3?t=' + Date.now());
+    });
+
+    function clearUpload() {
+        fetch('/reset_upload').then(() => {
+            document.getElementById('video-feed-3').src = 'https://placehold.co/600x400/000000/FFFFFF?text=Select+Media';
+        });
+    }
+
+    // Clear logs functionality
+    const clearBtn = document.getElementById('clear-logs');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            alertFeed.innerHTML = '<div class="feed-placeholder">Awaiting secure uplink...</div>';
+            isFirst = true;
+        });
+    }
+
+    function selectCam(idx) {
+        document.querySelectorAll('.cam-box').forEach(b => b.classList.remove('active'));
+        document.getElementById(`wrapper-${idx}`).classList.add('active');
+    }
+</script>
+{% endblock %}

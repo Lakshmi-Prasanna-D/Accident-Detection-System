@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Architecture | Pipeline{% endblock %}
+{% block page_title %}System Architecture{% endblock %}
+
+{% block content %}
+<div class="architecture-modern">
+    <div class="flow-wrapper">
+        <!-- Trigger -->
+        <div class="flow-node trigger">
+            <div class="node-header">
+                <span class="node-icon">📡</span>
+                <span class="node-label">When a frame is captured</span>
+            </div>
+        </div>
+        
+        <div class="connector-v"></div>
+
+        <!-- Init -->
+        <div class="flow-node action">
+            <div class="node-header">
+                <span class="node-icon">⚙️</span>
+                <span class="node-label">Initialize Detection Pipeline</span>
+            </div>
+        </div>
+
+        <div class="connector-v"></div>
+
+        <!-- For Each -->
+        <div class="flow-container for-each">
+            <div class="container-header">For Each detected object</div>
+            <div class="connector-v"></div>
+            
+            <!-- Condition Node -->
+            <div class="flow-node condition">
+                <div class="node-header">
+                    <span class="node-icon">⚖️</span>
+                    <span class="node-label">Condition: Collision / Hazard?</span>
+                </div>
+            </div>
+
+            <!-- Branch Bar -->
+            <div class="logic-branch-wrapper">
+                <div class="connector-v short"></div>
+                <div class="branch-bar"></div>
+                
+                <div class="branches">
+                    <div class="branch true">
+                        <div class="branch-label">TRUE</div>
+                        <div class="connector-v"></div>
+                        <div class="flow-node action success">
+                            <div class="node-header">
+                                <span class="node-icon">🚨</span>
+                                <span class="node-label">Trigger Alert & Emergency Dispatch</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="branch false">
+                        <div class="branch-label">FALSE</div>
+                        <div class="connector-v"></div>
+                        <div class="flow-node action info">
+                            <div class="node-header">
+                                <span class="node-icon">✅</span>
+                                <span class="node-label">Update Stats & Secure Safety Logs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="connector-v"></div>
+
+        <!-- Final -->
+        <div class="flow-node action">
+            <div class="node-header">
+                <span class="node-icon">📤</span>
+                <span class="node-label">Broadcast via WebSockets</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .architecture-modern { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 120px); padding: 2rem 0; }
+    .flow-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 800px; }
+    
+    .flow-node { background: var(--surface); border: 2px solid var(--border); border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; }
+    .node-header { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
+    .node-icon { font-size: 1.25rem; }
+    .node-label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    
+    .flow-node.trigger { border-top: 4px solid #10B981; }
+    .flow-node.action { border-top: 4px solid #3B82F6; }
+    .flow-node.condition { border-top: 4px solid #F59E0B; width: 400px; }
+    .logic-branch-wrapper { width: 100%; display: flex; flex-direction: column; align-items: center; position: relative; margin-top: -2px; }
+    
+    .branches { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        width: 100%; 
+        position: relative;
+    }
+    
+    .branch { display: flex; flex-direction: column; align-items: center; position: relative; }
+    
+    /* Perfect horizontal connector between branch centers */
+    .branch-bar { 
+        position: absolute;
+        top: 0;
+        left: 25%;
+        right: 25%;
+        height: 2px;
+        background: var(--border);
+        z-index: 1;
+    }
+    
+    .branch-label { font-size: 0.6rem; font-weight: 900; margin-top: 10px; margin-bottom: 4px; padding: 2px 8px; border-radius: 4px; z-index: 2; position: relative; top: -12px;}
+    .branch.true .branch-label { color: #10B981; background: var(--surface); border: 1px solid rgba(16, 185, 129, 0.2); }
+    .branch.false .branch-label { color: #EF4444; background: var(--surface); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    .connector-v { width: 2px; height: 30px; background: var(--border); position: relative; }
+    .connector-v.short { height: 20px; }
+    .connector-v::after { content: '▼'; position: absolute; bottom: -8px; left: -5px; font-size: 10px; color: var(--border); }
+
+    .flow-container.for-each { 
+        border: 2px dashed var(--border); 
+        padding: 2rem; 
+        border-radius: 12px; 
+        width: 100%; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        background: rgba(255,255,255,0.02);
+    }
+    .container-header { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; margin-bottom: 1rem; }
+</style>
+{% endblock %}

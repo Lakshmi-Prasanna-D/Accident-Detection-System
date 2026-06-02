@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts | Log Center{% endblock %}
+{% block page_title %}Real-time Alert Center{% endblock %}
+
+{% block content %}
+<div class="alerts-layout">
+    <div class="alerts-sidebar">
+        <div class="stat-mini-card danger">
+            <span class="l">Critical Events</span>
+            <span class="v" id="critical-count">0</span>
+        </div>
+        <div class="stat-mini-card">
+            <span class="l">Active Monitors</span>
+            <span class="v">4</span>
+        </div>
+        <button class="btn-clear-all" onclick="clearAlerts()">CLEAR LOG BUFFER</button>
+    </div>
+
+    <div class="alerts-main-feed" id="main-alert-feed">
+        <div class="empty-state">
+            <div class="radar"></div>
+            <p>Scanning urban network for incidents...</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .alerts-layout { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; }
+    
+    .alerts-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+    .stat-mini-card { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; border-radius: 20px; display: flex; flex-direction: column; gap: 5px; }
+    .stat-mini-card .l { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .stat-mini-card .v { font-size: 2rem; font-weight: 800; }
+    .stat-mini-card.danger { border-left: 4px solid var(--danger); }
+    .btn-clear-all { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); padding: 1rem; border-radius: 12px; font-weight: 700; cursor: pointer; margin-top: 1rem; }
+
+    .alerts-main-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 2rem; min-height: 500px; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+    
+    .alert-card { background: var(--surface-light); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; animation: slideIn 0.3s ease-out; }
+    .alert-card.accident { border-left: 6px solid var(--danger); }
+    .alert-card.safe { border-left: 6px solid var(--success); }
+    
+    .alert-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+    .alert-card.accident .alert-icon { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .alert-card.safe .alert-icon { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+
+    .alert-details { flex-grow: 1; }
+    .alert-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .alert-title { font-weight: 700; font-size: 1rem; }
+    .alert-meta { font-size: 0.75rem; color: var(--text-muted); }
+    .alert-body { font-size: 0.9rem; color: var(--text); }
+
+    .empty-state { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); gap: 1.5rem; }
+    .radar { width: 80px; height: 80px; border: 2px solid var(--primary); border-radius: 50%; position: relative; opacity: 0.3; }
+    .radar::after { content: ''; position: absolute; inset: 0; border: 2px solid var(--primary); border-radius: 50%; border-top-color: transparent; border-left-color: transparent; animation: spin 2s linear infinite; }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const feed = document.getElementById('main-alert-feed');
+    let critCount = 0;
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        
+        // Hide radar if system is sending data (means monitoring is active)
+        const isEmpty = feed.querySelector('.empty-state');
+        if (isEmpty && (data.alert || data.stats)) {
+            feed.innerHTML = '<div id="monitoring-status" style="text-align:center; font-size:0.7rem; color:var(--success); margin-bottom:1rem; opacity:0.6">● SYSTEM ONLINE - MONITORING ACTIVE</div>';
+        }
+
+        if (data.alert) {
+            const al = data.alert;
+            if (al.type === 'ACCIDENT') {
+                critCount++;
+                document.getElementById('critical-count').textContent = critCount;
+            }
+
+            addAlertCard(al);
+        }
+    };
+
+    function addAlertCard(al) {
+        const card = document.createElement('div');
+        card.className = `alert-card ${al.type.toLowerCase()}`;
+        const icon = al.type === 'ACCIDENT' ? '🚨' : '✅';
+        const title = al.type === 'ACCIDENT' ? 'CRITICAL INCIDENT DETECTED' : 'System Status: Flow Secured';
+        const time = new Date(al.timestamp * 1000).toLocaleTimeString();
+
+        card.innerHTML = `
+            <div class="alert-icon">${icon}</div>
+            <div class="alert-details">
+                <div class="alert-header">
+                    <span class="alert-title">${title}</span>
+                    <span class="alert-meta">${time}</span>
+                </div>
+                <div class="alert-body">
+                    Node: <b>${al.camera_id}</b> | Severity: <b>${al.severity || 'None'}</b>
+                </div>
+            </div>
+        `;
+        feed.prepend(card);
+        if (feed.children.length > 20) feed.lastElementChild.remove();
+    }
+
+    async function clearAlerts() {
+        if (!confirm("Clear all active logs?")) return;
+        await fetch('/api/clear_logs');
+        feed.innerHTML = `
+            <div class="empty-state">
+                <div class="radar"></div>
+                <p>Scanning urban network for incidents...</p>
+            </div>
+        `;
+        critCount = 0;
+        document.getElementById('critical-count').textContent = '0';
+    }
+
+    // Load initial history
+    async function loadHistory() {
+        const res = await fetch('/api/history');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.history && data.history.length > 0) {
+                // Remove empty state if history exists
+                const isEmpty = feed.querySelector('.empty-state');
+                if (isEmpty) {
+                    feed.innerHTML = '<div id="monitoring-status" style="text-align:center; font-size:0.7rem; color:var(--success); margin-bottom:1rem; opacity:0.6">● SESSION HISTORY LOADED - MONITORING ACTIVE</div>';
+                }
+                data.history.forEach(al => {
+                    if (al.type === 'ACCIDENT') {
+                        critCount++;
+                    }
+                    addAlertCard(al);
+                });
+                document.getElementById('critical-count').textContent = critCount;
+            }
+        }
+    }
+    
+    loadHistory();
+</script>
+{% endblock %}

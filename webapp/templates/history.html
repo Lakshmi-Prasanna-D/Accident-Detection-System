@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}History | Detections{% endblock %}
+{% block page_title %}Incident History{% endblock %}
+
+{% block content %}
+<div class="history-container">
+    <div class="filter-bar">
+        <input type="text" placeholder="Filter by Camera ID..." id="history-filter">
+        <button class="btn-primary">SEARCH</button>
+        <button class="btn-clear" onclick="clearHistory()">CLEAR HISTORY</button>
+    </div>
+
+    <div class="history-table-wrapper">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>TIMESTAMP</th>
+                    <th>CAMERA NODE</th>
+                    <th>SEVERITY</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if history %}
+                    {% for item in history|reverse %}
+                    <tr>
+                        <td>#{{ item.id }}</td>
+                        <td>{{ item.timestamp | datetimeformat if datetimeformat else item.timestamp }}</td>
+                        <td><span class="cam-badge">{{ item.camera_id }}</span></td>
+                        <td><span class="severity-badge {{ item.severity | lower }}">{{ item.severity }}</span></td>
+                        <td><span class="status-badge alert">ACCIDENT</span></td>
+                        <td><a href="/alerts" class="btn-view" style="text-decoration: none;">VIEW LOG</a></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 4rem; color: var(--text-muted); font-style: italic;">
+                            No historical incidents recorded in this session.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .filter-bar { display: flex; gap: 1rem; margin-bottom: 2rem; }
+    .filter-bar input { flex-grow: 1; background: var(--surface); border: 1px solid var(--border); padding: 0.75rem 1.5rem; border-radius: 12px; color: white; outline: none; }
+    .filter-bar input:focus { border-color: var(--primary); }
+
+    .history-table-wrapper { background: var(--surface); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .history-table th { text-align: left; padding: 1.25rem 1.5rem; background: rgba(255,255,255,0.02); color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+    .history-table td { padding: 1.25rem 1.5rem; border-top: 1px solid var(--border); }
+    
+    .cam-badge { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
+    
+    .severity-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+    .severity-badge.severe { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .severity-badge.moderate { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+    .severity-badge.minor { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+
+    .status-badge { font-weight: 800; font-size: 0.7rem; }
+    .status-badge.alert { color: var(--danger); }
+
+    .btn-view { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .btn-view:hover { background: var(--primary); border-color: var(--primary); color: white; }
+
+    .btn-primary { background: var(--primary); border: none; padding: 0.75rem 2rem; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; }
+    .btn-clear { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; margin-left: auto; }
+</style>
+<script>
+    async function clearHistory() {
+        if (!confirm("Are you sure you want to clear all incident history?")) return;
+        const res = await fetch('/api/clear_history');
+        if (res.ok) {
+            document.querySelector('tbody').innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center; padding: 4rem; color: var(--text-muted); font-style: italic;">
+                        No historical incidents recorded in this session.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Simple filter logic
+    document.getElementById('history-filter').addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase();
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            const camId = tr.querySelector('.cam-badge')?.textContent.toLowerCase() || "";
+            tr.style.display = camId.includes(val) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

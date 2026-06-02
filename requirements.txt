@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+websockets
+beautifulsoup4
+requests
+ultralytics
+opencv-python
+numpy
+torch
+lap
